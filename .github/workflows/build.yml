@@ -75,6 +75,41 @@ jobs:
           files: pkgstage/*.pkg.tar.zst
 
   # ---------------------------------------------------------------------------
+  # Windows — produce l'installer .exe (NSIS) e il pacchetto .msi
+  # ---------------------------------------------------------------------------
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Build installer
+        run: |
+          npm ci
+          npx tauri build
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows-installer
+          path: |
+            src-tauri/target/release/bundle/nsis/*-setup.exe
+            src-tauri/target/release/bundle/msi/*.msi
+
+      - name: Release
+        if: github.ref_type == 'tag'
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            src-tauri/target/release/bundle/nsis/*-setup.exe
+            src-tauri/target/release/bundle/msi/*.msi
+
+  # ---------------------------------------------------------------------------
   # macOS — produce .dmg + .app.tar.gz (Apple Silicon + Intel)
   # ---------------------------------------------------------------------------
   macos:
