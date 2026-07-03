@@ -141,7 +141,7 @@
     </div>
 
     <div style="text-align:center;margin-bottom:20px">
-      <button class="btn ghost" onclick="location.reload()">↻ Analizza un altro file</button>
+      <button class="btn ghost" id="reset">↻ Analizza un altro file</button>
     </div>
   </div>
 
@@ -281,6 +281,16 @@ document.getElementById('tabs').addEventListener('click',e=>{
   document.querySelectorAll('.pane').forEach(x=>x.classList.remove('active'));
   t.classList.add('active');
   document.getElementById('pane-'+t.dataset.p).classList.add('active');
+});
+document.getElementById('reset').addEventListener('click',()=>{
+  document.getElementById('result').classList.add('hidden');
+  document.getElementById('loader').classList.remove('hidden');
+  fileEl.value='';
+  document.getElementById('fname').textContent='';
+  // riporta la prima scheda come attiva
+  document.querySelectorAll('.tab').forEach((x,i)=>x.classList.toggle('active',i===0));
+  document.querySelectorAll('.pane').forEach((x,i)=>x.classList.toggle('active',i===0));
+  window.scrollTo({top:0,behavior:'smooth'});
 });
 </script>
 </body>
