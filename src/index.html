@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Validatore Flusso Unicredit ILC</title>
+<style>
+  :root{
+    --bg:#f4f6f9; --panel:#ffffff; --ink:#1f2733; --muted:#67717f; --line:#e3e8ef;
+    --brand:#0b5cab; --brand-d:#084784;
+    --ok:#188a53; --ok-bg:#e6f6ee; --warn:#9a6a00; --warn-bg:#fdf3dc; --err:#b3261e; --err-bg:#fce8e6;
+    --chip:#eef2f7;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;background:var(--bg);color:var(--ink);font-size:15px;line-height:1.5}
+  header.top{background:linear-gradient(180deg,var(--brand),var(--brand-d));color:#fff;padding:18px 26px;display:flex;align-items:center;gap:16px;box-shadow:0 2px 8px rgba(0,0,0,.12)}
+  header.top .logo{width:42px;height:42px;border-radius:9px;background:rgba(255,255,255,.16);display:flex;align-items:center;justify-content:center;font-size:22px}
+  header.top h1{font-size:19px;margin:0;font-weight:650}
+  header.top p{margin:2px 0 0;font-size:13px;opacity:.85}
+  .wrap{max-width:1180px;margin:0 auto;padding:22px}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:20px;margin-bottom:18px;box-shadow:0 1px 2px rgba(16,24,40,.04)}
+  h2{font-size:16px;margin:0 0 14px;display:flex;align-items:center;gap:8px}
+  h2 .n{background:var(--brand);color:#fff;width:22px;height:22px;border-radius:6px;display:inline-flex;align-items:center;justify-content:center;font-size:13px}
+  /* drop zone */
+  #drop{border:2px dashed #c3ccd8;border-radius:12px;padding:34px;text-align:center;background:#fbfcfe;transition:.15s;cursor:pointer}
+  #drop.hot{border-color:var(--brand);background:#eef5fd}
+  #drop .big{font-size:40px;margin-bottom:8px}
+  #drop b{color:var(--brand)}
+  .muted{color:var(--muted)}
+  .btn{background:var(--brand);color:#fff;border:0;border-radius:8px;padding:10px 18px;font-size:14px;font-weight:600;cursor:pointer}
+  .btn:hover{background:var(--brand-d)}
+  .btn.ghost{background:#fff;color:var(--brand);border:1px solid #c3ccd8}
+  /* summary cards */
+  .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px}
+  .stat{background:#fff;border:1px solid var(--line);border-radius:10px;padding:14px 16px}
+  .stat .v{font-size:26px;font-weight:700;line-height:1}
+  .stat .k{font-size:12px;color:var(--muted);margin-top:6px;text-transform:uppercase;letter-spacing:.4px}
+  .stat.bad .v{color:var(--err)}
+  .stat.good .v{color:var(--ok)}
+  /* verdict banner */
+  .verdict{border-radius:12px;padding:16px 18px;margin-bottom:18px;display:flex;gap:14px;align-items:flex-start;font-size:15px}
+  .verdict .ic{font-size:26px;line-height:1}
+  .verdict.error{background:var(--err-bg);border:1px solid #f3b9b5;color:#7a1a15}
+  .verdict.warn{background:var(--warn-bg);border:1px solid #ecd9a3;color:#6b4b00}
+  .verdict.ok{background:var(--ok-bg);border:1px solid #b7e2ca;color:#0f5c37}
+  .verdict b{font-weight:700}
+  /* checks */
+  .check{display:flex;gap:12px;padding:12px 0;border-top:1px solid var(--line)}
+  .check:first-child{border-top:0}
+  .badge{flex:0 0 auto;width:76px;text-align:center;font-size:12px;font-weight:700;border-radius:20px;padding:4px 0;height:fit-content}
+  .badge.ok{background:var(--ok-bg);color:var(--ok)}
+  .badge.warn{background:var(--warn-bg);color:var(--warn)}
+  .badge.error{background:var(--err-bg);color:var(--err)}
+  .check .body b{display:block;margin-bottom:2px}
+  .check .body .d{color:var(--muted);font-size:13.5px}
+  .check .body .d code{background:var(--chip);padding:1px 5px;border-radius:4px;font-size:12.5px}
+  /* tabs */
+  .tabs{display:flex;gap:6px;flex-wrap:wrap;border-bottom:1px solid var(--line);margin-bottom:16px}
+  .tab{padding:9px 16px;border:1px solid transparent;border-bottom:0;border-radius:9px 9px 0 0;cursor:pointer;font-size:14px;font-weight:600;color:var(--muted);position:relative;top:1px}
+  .tab.active{background:#fff;border-color:var(--line);color:var(--brand)}
+  .pane{display:none}
+  .pane.active{display:block}
+  /* tables */
+  .scroll{overflow-x:auto;border:1px solid var(--line);border-radius:8px}
+  table{border-collapse:collapse;width:100%;font-size:13px}
+  th,td{text-align:left;padding:7px 10px;border-bottom:1px solid var(--line);white-space:nowrap}
+  th{background:#f7f9fc;font-weight:650;color:#374151;position:sticky;top:0}
+  tr:hover td{background:#fafbfd}
+  td.calc{color:#9aa4b2;font-style:italic}
+  .pill{display:inline-block;font-size:11px;font-weight:700;padding:2px 8px;border-radius:20px}
+  .pill.ilcm01{background:#e6f0fb;color:var(--brand)}
+  .pill.other{background:var(--err-bg);color:var(--err)}
+  .pill.ok{background:var(--ok-bg);color:var(--ok)}
+  .pill.no{background:var(--err-bg);color:var(--err)}
+  pre.code{background:#0f1b2d;color:#d6e2f0;padding:16px;border-radius:8px;overflow-x:auto;font-size:12.5px;line-height:1.5;margin:0}
+  pre.code .t{color:#7fd3a1}.pre .a{color:#e0b56b}
+  .tree{font-size:14px}
+  .env{border:1px solid var(--line);border-radius:9px;margin-bottom:10px;overflow:hidden}
+  .env .hd{background:#f2f6fb;padding:9px 13px;font-weight:650;display:flex;justify-content:space-between;align-items:center}
+  .doc{padding:8px 13px;border-top:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+  .doc .meta{color:var(--muted);font-size:13px}
+  .legend{font-size:12.5px;color:var(--muted);margin-top:10px}
+  .legend .calc{font-style:italic}
+  .hidden{display:none}
+  .note{background:#eef5fd;border-left:3px solid var(--brand);padding:10px 14px;border-radius:6px;font-size:13.5px;margin-bottom:14px}
+  .foot{color:var(--muted);font-size:12px;text-align:center;padding:14px}
+  a.dl{font-size:13px;font-weight:600;color:var(--brand);text-decoration:none;cursor:pointer}
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="logo">🛡️</div>
+  <div>
+    <h1>Validatore Flusso Unicredit&nbsp;ILC</h1>
+    <p>Controlla un file di input prima della lavorazione e mostra un'anteprima di BOL, cust_data.xml e DAT</p>
+  </div>
+</header>
+
+<div class="wrap">
+
+  <div class="card" id="loader">
+    <h2><span class="n">1</span> Carica il file del lotto</h2>
+    <div id="drop">
+      <div class="big">📥</div>
+      <div>Trascina qui il file del lotto, oppure <b>clicca per sceglierlo</b></div>
+      <div class="muted" style="margin-top:6px;font-size:13px">Es. il file <code>327982</code> della cartella <code>input</code> — nessun dato lascia il tuo computer</div>
+      <input type="file" id="file" class="hidden">
+    </div>
+    <div class="muted" id="fname" style="margin-top:12px"></div>
+  </div>
+
+  <div id="result" class="hidden">
+
+    <div id="verdict"></div>
+
+    <div class="card">
+      <h2><span class="n">2</span> Riepilogo del lotto</h2>
+      <div class="cards" id="stats"></div>
+    </div>
+
+    <div class="card">
+      <h2><span class="n">3</span> Esito dei controlli</h2>
+      <div id="checks"></div>
+    </div>
+
+    <div class="card">
+      <h2><span class="n">4</span> Anteprima di quello che verrà prodotto</h2>
+      <div class="note">Questa è un'anteprima <b>a scopo di verifica</b>: mostra come i dati del file di input verranno tradotti nei file di uscita.
+      I valori contrassegnati come <span class="calc" style="color:#9aa4b2">«calcolato in stampa»</span> vengono determinati solo quando i PDF vengono generati (numero pagine, fogli, nome del PDF).</div>
+      <div class="tabs" id="tabs">
+        <div class="tab active" data-p="struct">📦 Struttura</div>
+        <div class="tab" data-p="bol">📄 File .bol</div>
+        <div class="tab" data-p="xml">🗂️ cust_data.xml</div>
+        <div class="tab" data-p="dat">📊 File .dat</div>
+      </div>
+      <div class="pane active" id="pane-struct"></div>
+      <div class="pane" id="pane-bol"></div>
+      <div class="pane" id="pane-xml"></div>
+      <div class="pane" id="pane-dat"></div>
+    </div>
+
+    <div style="text-align:center;margin-bottom:20px">
+      <button class="btn ghost" onclick="location.reload()">↻ Analizza un altro file</button>
+    </div>
+  </div>
+
+</div>
+<div class="foot">Validatore locale · flusso ILCM01 · generato dai progetti Nest &amp; Raven</div>
+
+<script src="model.js"></script>
+<script src="engine.js"></script>
+<script>
+const E = window.ILC_ENGINE;
+const M = E.M, byDisc = E.byDisc, byName = E.byName, STREAM = E.STREAM;
+const {field, allFields, trim, esc, parseFlow, validate, resolveSource, cellFor} = E;
+
+// ---------- rendering ----------
+function money(n){return n.toLocaleString('it-IT');}
+function renderStats(m){
+  const nomeLotto = trim(m.header.nopl?field(byName.TemplateNoplFormat,m.header.nopl.line,"nomlot"):"") || "—";
+  const printable = m.docs.filter(d=>d.template).length;
+  const streams=Object.keys(m.streamsInDocs).filter(s=>s.trim()!=="");
+  const cards=[
+    {k:"Nome lotto", v:esc(nomeLotto)},
+    {k:"Buste", v:m.envelopes.length},
+    {k:"Documenti totali", v:m.docs.length},
+    {k:"Documenti stampabili", v:printable, cls: printable<m.docs.length?'bad':'good'},
+    {k:"Flussi rilevati", v:streams.length, cls: streams.length>1?'bad':'good'},
+    {k:"Righe", v:m.rows},
+  ];
+  document.getElementById('stats').innerHTML = cards.map(c=>
+    `<div class="stat ${c.cls||''}"><div class="v">${c.v}</div><div class="k">${c.k}</div></div>`).join('');
+}
+function renderVerdict(checks, m){
+  const err=checks.filter(c=>c.level==='error').length, warn=checks.filter(c=>c.level==='warn').length;
+  const el=document.getElementById('verdict');
+  if(err>0){
+    el.className='verdict error';
+    el.innerHTML=`<div class="ic">⛔</div><div><b>Il file NON è pronto per la lavorazione.</b><br>Sono stati rilevati ${err} problemi bloccanti${warn?` e ${warn} avvisi`:''}. Vedi il dettaglio qui sotto: così com'è, il lotto andrebbe in errore.</div>`;
+  }else if(warn>0){
+    el.className='verdict warn';
+    el.innerHTML=`<div class="ic">⚠️</div><div><b>File utilizzabile, ma con ${warn} avvisi.</b><br>Nessun problema bloccante, ma controlla le segnalazioni prima di procedere.</div>`;
+  }else{
+    el.className='verdict ok';
+    el.innerHTML=`<div class="ic">✅</div><div><b>File valido.</b><br>Tutti i controlli sono superati: il flusso è coerente con il tracciato ${STREAM}.</div>`;
+  }
+}
+function renderChecks(checks){
+  document.getElementById('checks').innerHTML = checks.map(c=>{
+    const lbl={ok:'OK',warn:'ATTENZIONE',error:'ERRORE'}[c.level];
+    return `<div class="check"><div class="badge ${c.level}">${lbl}</div>
+      <div class="body"><b>${c.title}</b><div class="d">${c.detail}</div></div></div>`;
+  }).join('');
+}
+function renderStruct(m){
+  let h='<div class="tree">';
+  m.envelopes.forEach((e,i)=>{
+    const cap = e.begin? trim(field(byName.EnvelopeBegin,e.begin.line,"cap")):"";
+    h+=`<div class="env"><div class="hd"><span>✉️ Busta ${i+1} ${cap?`· CAP ${esc(cap)}`:''}</span><span class="muted" style="font-weight:400;font-size:13px">${e.docs.length} documenti</span></div>`;
+    e.docs.forEach((d,j)=>{
+      const isMain = d.st===STREAM;
+      const dest = trim(d.headings.HeadingAddress?field(byName.HeadingAddress,d.headings.HeadingAddress.line,"anag1"):"");
+      h+=`<div class="doc">
+        <div><b>Documento ${j+1}</b> <span class="pill ${isMain?'ilcm01':'other'}">${esc(d.st.trim()||'(controllo)')}</span>
+          ${dest?`<span class="meta"> · ${esc(dest)}</span>`:''}</div>
+        <div>${d.template?`<span class="pill ok">template ${esc(d.template)}</span>`:`<span class="pill no">senza template</span>`}</div>
+      </div>`;
+    });
+    h+='</div>';
+  });
+  h+='</div>';
+  document.getElementById('pane-struct').innerHTML=h;
+}
+function outTable(fields, rows, ctxs){
+  let h='<div class="scroll"><table><thead><tr>'+fields.map(f=>`<th>${esc(f.name)}</th>`).join('')+'</tr></thead><tbody>';
+  ctxs.forEach(ctx=>{
+    h+='<tr>'+fields.map(f=>{
+      const c=cellFor(f,ctx);
+      return c.calc?`<td class="calc">${esc(c.text)}</td>`:`<td>${esc(c.text)||'<span style="color:#c3ccd8">·</span>'}</td>`;
+    }).join('')+'</tr>';
+  });
+  h+='</tbody></table></div>';
+  return h;
+}
+function renderBol(m){
+  const hctx={m,env:null,doc:null};
+  const dctxs=m.docs.map(d=>({m,env:d.env,doc:d}));
+  let h='<h3 style="font-size:14px;margin:4px 0 8px">Intestazione BOL <span class="muted" style="font-weight:400">(1 riga per lotto)</span></h3>';
+  h+=outTable(M.outputs.bolHeader,null,[hctx]);
+  h+='<h3 style="font-size:14px;margin:18px 0 8px">Dati BOL <span class="muted" style="font-weight:400">(1 riga per documento)</span></h3>';
+  h+=outTable(M.outputs.bolData,null,dctxs);
+  h+='<div class="legend">Il file <code>.bol</code> finale contiene l\'intestazione seguita da una riga per ciascun documento. <span class="calc">In corsivo</span> i valori calcolati durante la stampa.</div>';
+  document.getElementById('pane-bol').innerHTML=h;
+}
+function renderDat(m){
+  const hctx={m,env:null,doc:null};
+  const dctxs=m.docs.map(d=>({m,env:d.env,doc:d}));
+  let h='<h3 style="font-size:14px;margin:4px 0 8px">Intestazione DAT</h3>';
+  h+=outTable(M.outputs.datHeader,null,[hctx]);
+  h+='<h3 style="font-size:14px;margin:18px 0 8px">Dati DAT <span class="muted" style="font-weight:400">(1 riga per documento, con conteggi pagine/fogli)</span></h3>';
+  h+=outTable(M.outputs.datData,null,dctxs);
+  document.getElementById('pane-dat').innerHTML=h;
+}
+function renderXml(m){
+  const x = E.buildCustDataXml(m);
+  document.getElementById('pane-xml').innerHTML =
+    '<div class="legend" style="margin-top:0;margin-bottom:8px">Contenuto di <code>cust_data.xml</code>: un blocco <code>&lt;Document&gt;</code> per documento, con i <b>nomi reali dei campi</b> del tracciato (come li produce <code>StagingAreaToXML</code> via JSON→XML). Le lunghezze/padding esatti e i metadati di stampa non sono inclusi.</div>'+
+    '<pre class="code">'+esc(x)+'</pre>';
+}
+
+// ---------- main ----------
+function analyze(text, name){
+  const m=parseFlow(text);
+  const checks=validate(m);
+  document.getElementById('loader').classList.add('hidden');
+  document.getElementById('result').classList.remove('hidden');
+  renderVerdict(checks,m);
+  renderStats(m);
+  renderChecks(checks);
+  renderStruct(m); renderBol(m); renderXml(m); renderDat(m);
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+
+// ---------- events ----------
+const drop=document.getElementById('drop'), fileEl=document.getElementById('file');
+drop.addEventListener('click',()=>fileEl.click());
+fileEl.addEventListener('change',e=>{ if(e.target.files[0]) readFile(e.target.files[0]); });
+['dragenter','dragover'].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.add('hot');}));
+['dragleave','drop'].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.remove('hot');}));
+drop.addEventListener('drop',e=>{ const f=e.dataTransfer.files[0]; if(f) readFile(f); });
+function readFile(f){
+  document.getElementById('fname').innerHTML='📄 '+esc(f.name);
+  const r=new FileReader();
+  r.onload=()=>analyze(r.result, f.name);
+  r.readAsText(f,'utf-8');
+}
+document.getElementById('tabs').addEventListener('click',e=>{
+  const t=e.target.closest('.tab'); if(!t) return;
+  document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
+  document.querySelectorAll('.pane').forEach(x=>x.classList.remove('active'));
+  t.classList.add('active');
+  document.getElementById('pane-'+t.dataset.p).classList.add('active');
+});
+</script>
+</body>
+</html>

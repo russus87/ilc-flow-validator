@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=ILC Flow Validator
+Comment=Valida un file del flusso Unicredit ILC e ne mostra l'anteprima
+Exec=ilc-flow-validator
+Icon=ilc-flow-validator
+Terminal=false
+Categories=Utility;Office;

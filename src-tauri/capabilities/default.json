@@ -1,0 +1,7 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "default",
+  "description": "Permessi di base: l'app è puramente frontend e non usa API native",
+  "windows": ["main"],
+  "permissions": ["core:default"]
+}

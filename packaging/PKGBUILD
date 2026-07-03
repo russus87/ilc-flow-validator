@@ -1,0 +1,24 @@
+# Maintainer: russus <russus2@gmail.com>
+# Prebuilt PKGBUILD: assembla il pacchetto Arch dagli artefatti già prodotti
+# dallo step di build della CI (qui non avviene alcuna compilazione).
+pkgname=ilc-flow-validator
+pkgver=0.0.0
+pkgrel=1
+pkgdesc="Validatore del flusso Unicredit ILC con anteprima BOL / cust_data.xml / DAT"
+arch=('x86_64')
+url="https://github.com/russus87/ilc-flow-validator"
+license=('MIT')
+depends=('webkit2gtk-4.1' 'gtk3')
+options=('!strip' '!debug')
+
+package() {
+  install -Dm755 "$startdir/ilc-flow-validator" "$pkgdir/usr/bin/ilc-flow-validator"
+  install -Dm644 "$startdir/ilc-flow-validator.desktop" \
+    "$pkgdir/usr/share/applications/ilc-flow-validator.desktop"
+  install -Dm644 "$startdir/icon-128.png" \
+    "$pkgdir/usr/share/icons/hicolor/128x128/apps/ilc-flow-validator.png"
+  install -Dm644 "$startdir/icon-256.png" \
+    "$pkgdir/usr/share/icons/hicolor/256x256/apps/ilc-flow-validator.png"
+  install -Dm644 "$startdir/icon-512.png" \
+    "$pkgdir/usr/share/icons/hicolor/512x512/apps/ilc-flow-validator.png"
+}

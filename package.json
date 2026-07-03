@@ -1,0 +1,15 @@
+{
+  "name": "ilc-flow-validator",
+  "version": "0.1.0",
+  "description": "Validatore del flusso Unicredit ILC con anteprima BOL / cust_data.xml / DAT",
+  "type": "module",
+  "scripts": {
+    "tauri": "tauri",
+    "dev": "tauri dev",
+    "build": "tauri build"
+  },
+  "license": "MIT",
+  "devDependencies": {
+    "@tauri-apps/cli": "^2.1.0"
+  }
+}

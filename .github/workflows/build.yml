@@ -1,0 +1,118 @@
+name: build
+
+"on":
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  # ---------------------------------------------------------------------------
+  # Arch Linux — produce ilc-flow-validator-<ver>-1-x86_64.pkg.tar.zst
+  # ---------------------------------------------------------------------------
+  arch:
+    runs-on: ubuntu-latest
+    container:
+      image: archlinux:latest
+    steps:
+      - name: Install toolchain & deps
+        run: |
+          pacman -Syu --noconfirm --needed \
+            base-devel git rust nodejs npm \
+            webkit2gtk-4.1 gtk3 \
+            librsvg patchelf openssl sudo
+
+      - uses: actions/checkout@v4
+
+      - name: Resolve version
+        id: ver
+        run: |
+          if [ "${GITHUB_REF_TYPE}" = "tag" ]; then
+            V="${GITHUB_REF_NAME#v}"
+          else
+            V="$(node -p "require('./package.json').version")"
+          fi
+          echo "version=$V" >> "$GITHUB_OUTPUT"
+
+      - name: Build binary through the Tauri CLI
+        # Deve passare dalla CLI Tauri: abilita la feature custom-protocol così
+        # l'app servita usa il frontend impacchettato invece del dev server.
+        run: |
+          npm ci
+          npx tauri build --no-bundle
+
+      - name: Stage package artifacts
+        run: |
+          mkdir -p pkgstage
+          cp src-tauri/target/release/ilc-flow-validator pkgstage/ilc-flow-validator
+          cp packaging/ilc-flow-validator.desktop pkgstage/ilc-flow-validator.desktop
+          cp packaging/PKGBUILD pkgstage/PKGBUILD
+          rsvg-convert -w 128 -h 128 assets/icon.svg -o pkgstage/icon-128.png
+          rsvg-convert -w 256 -h 256 assets/icon.svg -o pkgstage/icon-256.png
+          rsvg-convert -w 512 -h 512 assets/icon.svg -o pkgstage/icon-512.png
+          sed -i "s/^pkgver=.*/pkgver=${{ steps.ver.outputs.version }}/" pkgstage/PKGBUILD
+
+      - name: makepkg (.pkg.tar.zst)
+        run: |
+          useradd -m builder
+          chown -R builder pkgstage
+          cd pkgstage
+          sudo -u builder makepkg -f --noconfirm
+          ls -1 *.pkg.tar.zst
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: arch-package
+          path: pkgstage/*.pkg.tar.zst
+
+      - name: Release
+        if: github.ref_type == 'tag'
+        uses: softprops/action-gh-release@v2
+        with:
+          files: pkgstage/*.pkg.tar.zst
+
+  # ---------------------------------------------------------------------------
+  # macOS — produce .dmg + .app.tar.gz (Apple Silicon + Intel)
+  # ---------------------------------------------------------------------------
+  macos:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: aarch64-apple-darwin
+          - target: x86_64-apple-darwin
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Build bundle
+        run: |
+          npm ci
+          npx tauri build --target ${{ matrix.target }}
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: macos-${{ matrix.target }}
+          path: |
+            src-tauri/target/${{ matrix.target }}/release/bundle/dmg/*.dmg
+            src-tauri/target/${{ matrix.target }}/release/bundle/macos/*.app.tar.gz
+
+      - name: Release
+        if: github.ref_type == 'tag'
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            src-tauri/target/${{ matrix.target }}/release/bundle/dmg/*.dmg
+            src-tauri/target/${{ matrix.target }}/release/bundle/macos/*.app.tar.gz
