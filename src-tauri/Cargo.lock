@@ -1436,7 +1436,7 @@ dependencies = [
 
 [[package]]
 name = "ilc-flow-validator"
-version = "0.1.2"
+version = "0.1.3"
 dependencies = [
  "tauri",
  "tauri-build",

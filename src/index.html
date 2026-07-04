@@ -86,6 +86,12 @@
   .note{background:#eef5fd;border-left:3px solid var(--brand);padding:10px 14px;border-radius:6px;font-size:13.5px;margin-bottom:14px}
   .foot{color:var(--muted);font-size:12px;text-align:center;padding:14px}
   a.dl{font-size:13px;font-weight:600;color:var(--brand);text-decoration:none;cursor:pointer}
+  .filebar{display:flex;align-items:center;gap:8px;margin-bottom:12px}
+  .filebar .fname{font-size:13px;color:var(--muted);font-weight:600}
+  .filebar .spacer{flex:1}
+  .mini{background:#fff;border:1px solid #c3ccd8;border-radius:7px;padding:5px 12px;font-size:12.5px;font-weight:600;color:var(--brand);cursor:pointer}
+  .mini:hover{background:#eef5fd}
+  .mini.done{background:var(--ok-bg);border-color:#b7e2ca;color:var(--ok)}
 </style>
 </head>
 <body>
@@ -225,6 +231,14 @@ function outTable(fields, rows, ctxs){
   h+='</tbody></table></div>';
   return h;
 }
+let currentLotto='lotto';
+const FILES={};
+function fileBar(key, filename, text){
+  FILES[key]={name:filename, text};
+  return '<div class="filebar"><span class="fname">📄 '+esc(filename)+'</span><span class="spacer"></span>'+
+    '<button class="mini copy" data-file="'+key+'">📋 Copia</button>'+
+    '<button class="mini dl" data-file="'+key+'">⬇️ Scarica</button></div>';
+}
 function renderBol(m){
   const hctx={m,env:null,doc:null};
   const dctxs=m.docs.map(d=>({m,env:d.env,doc:d}));
@@ -232,8 +246,8 @@ function renderBol(m){
   h+=outTable(M.outputs.bolHeader,null,[hctx]);
   h+='<h3 style="font-size:14px;margin:18px 0 8px">Dati BOL <span class="muted" style="font-weight:400">(1 riga per documento)</span></h3>';
   h+=outTable(M.outputs.bolData,null,dctxs);
-  h+='<div class="legend">Il file <code>.bol</code> finale contiene l\'intestazione seguita da una riga per ciascun documento. <span class="calc">In corsivo</span> i valori calcolati durante la stampa.</div>';
-  document.getElementById('pane-bol').innerHTML=h;
+  h+='<div class="legend">Il file <code>.bol</code> finale contiene l\'intestazione seguita da una riga per ciascun documento. <span class="calc">In corsivo</span> i valori calcolati durante la stampa (vuoti nel file scaricato).</div>';
+  document.getElementById('pane-bol').innerHTML=fileBar('bol', currentLotto+'.bol', E.buildBolText(m))+h;
 }
 function renderDat(m){
   const hctx={m,env:null,doc:null};
@@ -242,24 +256,27 @@ function renderDat(m){
   h+=outTable(M.outputs.datHeader,null,[hctx]);
   h+='<h3 style="font-size:14px;margin:18px 0 8px">Dati DAT <span class="muted" style="font-weight:400">(1 riga per documento, con conteggi pagine/fogli)</span></h3>';
   h+=outTable(M.outputs.datData,null,dctxs);
-  document.getElementById('pane-dat').innerHTML=h;
+  document.getElementById('pane-dat').innerHTML=fileBar('dat', currentLotto+'.dat', E.buildDatText(m))+h;
 }
 function renderXReport(m){
   const x = E.buildXReportXml(m);
   document.getElementById('pane-xml').innerHTML =
+    fileBar('xml', currentLotto+'.xml', x)+
     '<div class="legend" style="margin-top:0;margin-bottom:8px">Contenuto dell\'<b>XReport</b> (il file <code>&lt;lotto&gt;.xml</code>): un blocco <code>&lt;Document&gt;</code> per documento, con i <b>nomi reali dei campi</b> del tracciato (come li produce <code>StagingAreaToXML</code> via JSON→XML). Le lunghezze/padding esatti e i metadati di stampa non sono inclusi.</div>'+
     '<pre class="code">'+esc(x)+'</pre>';
 }
 function renderCustData(m){
   const x = E.buildCustDataXml(m);
   document.getElementById('pane-custdata').innerHTML =
-    '<div class="legend" style="margin-top:0;margin-bottom:8px">Contenuto di <code>cust_data.xml</code>: <code>&lt;DATASET&gt;</code> con <code>&lt;GLOBAL RECAPITISTA&gt;</code> e una <code>&lt;BUSTA ID&gt;</code> per busta (indirizzo di restituzione <code>ADDCART1..5</code>). RECAPITISTA da <code>TemplateNoplFormat.codrecap</code> (fonte da confermare); ID busta da <code>EnvelopeNop0Format.coduni</code>.</div>'+
+    fileBar('custdata', 'cust_data.xml', x)+
+    '<div class="legend" style="margin-top:0;margin-bottom:8px">Contenuto di <code>cust_data.xml</code>: <code>&lt;DATASET&gt;</code> con <code>&lt;GLOBAL RECAPITISTA&gt;</code> e una <code>&lt;BUSTA ID&gt;</code> per busta (indirizzo di restituzione <code>ADDCART1..5</code>, valorizzato solo per le raccomandate con cartolina di ritorno). RECAPITISTA da <code>TemplateNoplFormat.codrecap</code> (fonte da confermare); ID busta da <code>EnvelopeNop0Format.coduni</code>.</div>'+
     '<pre class="code">'+esc(x)+'</pre>';
 }
 
 // ---------- main ----------
 function analyze(text, name){
   const m=parseFlow(text);
+  currentLotto = trim(m.header.nopl ? field(byName.TemplateNoplFormat, m.header.nopl.line, "nomlot") : "") || "lotto";
   const checks=validate(m);
   document.getElementById('loader').classList.add('hidden');
   document.getElementById('result').classList.remove('hidden');
@@ -277,6 +294,39 @@ fileEl.addEventListener('change',e=>{ if(e.target.files[0]) readFile(e.target.fi
 ['dragenter','dragover'].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.add('hot');}));
 ['dragleave','drop'].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.remove('hot');}));
 drop.addEventListener('drop',e=>{ const f=e.dataTransfer.files[0]; if(f) readFile(f); });
+
+// Pulsanti Copia / Scarica su ogni file prodotto
+function flash(btn, msg){
+  const old=btn.textContent;
+  btn.textContent=msg; btn.classList.add('done');
+  setTimeout(()=>{ btn.textContent=old; btn.classList.remove('done'); }, 1400);
+}
+function copyText(text){
+  if(navigator.clipboard && navigator.clipboard.writeText){ return navigator.clipboard.writeText(text); }
+  return new Promise((res,rej)=>{
+    try{
+      const ta=document.createElement('textarea'); ta.value=text;
+      ta.style.position='fixed'; ta.style.opacity='0'; document.body.appendChild(ta);
+      ta.select(); document.execCommand('copy'); ta.remove(); res();
+    }catch(err){ rej(err); }
+  });
+}
+function downloadText(name, text){
+  const blob=new Blob([text],{type:'application/octet-stream'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a'); a.href=url; a.download=name;
+  document.body.appendChild(a); a.click();
+  setTimeout(()=>{ URL.revokeObjectURL(url); a.remove(); }, 100);
+}
+document.addEventListener('click', e=>{
+  const b=e.target.closest('.mini'); if(!b) return;
+  const f=FILES[b.dataset.file]; if(!f) return;
+  if(b.classList.contains('copy')){
+    copyText(f.text).then(()=>flash(b,'✓ Copiato')).catch(()=>flash(b,'⚠️ Copia non riuscita'));
+  }else{
+    downloadText(f.name, f.text); flash(b,'✓ Scaricato');
+  }
+});
 function readFile(f){
   document.getElementById('fname').innerHTML='📄 '+esc(f.name);
   const r=new FileReader();

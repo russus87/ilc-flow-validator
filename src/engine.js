@@ -191,5 +191,28 @@
     return x;
   }
 
-  root.ILC_ENGINE = { M, byDisc, byName, STREAM, trim, esc, field, allFields, parseFlow, validate, resolveSource, cellFor, buildDocObject, buildXReportXml, buildCustDataXml };
+  // Ricostruzione testuale a larghezza fissa di .bol / .dat (intestazione + una riga per documento).
+  // Padding: stringhe giustificate a sinistra (spazi a destra), numerici a destra (zeri a sinistra).
+  // I campi calcolati a runtime (nomi PDF, pagine, fogli) restano vuoti nell'anteprima.
+  function pad(value, len, type){
+    let v = value == null ? '' : String(value);
+    if(v.length > len) v = v.substr(0, len);
+    return type === 'num' ? v.padStart(len, '0') : v.padEnd(len, ' ');
+  }
+  function buildFlatText(m, fields, ctxs){
+    return ctxs.map(ctx => fields.map(f => {
+      const c = cellFor(f, ctx);
+      return pad(c.calc ? '' : c.text, f.len, f.type);
+    }).join('')).join('\n');
+  }
+  function buildBolText(m){
+    return buildFlatText(m, M.outputs.bolHeader, [{m, env:null, doc:null}]) + '\n' +
+           buildFlatText(m, M.outputs.bolData, m.docs.map(d => ({m, env:d.env, doc:d})));
+  }
+  function buildDatText(m){
+    return buildFlatText(m, M.outputs.datHeader, [{m, env:null, doc:null}]) + '\n' +
+           buildFlatText(m, M.outputs.datData, m.docs.map(d => ({m, env:d.env, doc:d})));
+  }
+
+  root.ILC_ENGINE = { M, byDisc, byName, STREAM, trim, esc, field, allFields, parseFlow, validate, resolveSource, cellFor, buildDocObject, buildXReportXml, buildCustDataXml, buildBolText, buildDatText };
 })(typeof window!=='undefined'? window : global);
