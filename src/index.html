@@ -131,11 +131,13 @@
       <div class="tabs" id="tabs">
         <div class="tab active" data-p="struct">📦 Struttura</div>
         <div class="tab" data-p="bol">📄 File .bol</div>
-        <div class="tab" data-p="xml">🗂️ cust_data.xml</div>
+        <div class="tab" data-p="custdata">📮 cust_data.xml</div>
+        <div class="tab" data-p="xml">🗂️ XReport (.xml)</div>
         <div class="tab" data-p="dat">📊 File .dat</div>
       </div>
       <div class="pane active" id="pane-struct"></div>
       <div class="pane" id="pane-bol"></div>
+      <div class="pane" id="pane-custdata"></div>
       <div class="pane" id="pane-xml"></div>
       <div class="pane" id="pane-dat"></div>
     </div>
@@ -242,10 +244,16 @@ function renderDat(m){
   h+=outTable(M.outputs.datData,null,dctxs);
   document.getElementById('pane-dat').innerHTML=h;
 }
-function renderXml(m){
-  const x = E.buildCustDataXml(m);
+function renderXReport(m){
+  const x = E.buildXReportXml(m);
   document.getElementById('pane-xml').innerHTML =
-    '<div class="legend" style="margin-top:0;margin-bottom:8px">Contenuto di <code>cust_data.xml</code>: un blocco <code>&lt;Document&gt;</code> per documento, con i <b>nomi reali dei campi</b> del tracciato (come li produce <code>StagingAreaToXML</code> via JSON→XML). Le lunghezze/padding esatti e i metadati di stampa non sono inclusi.</div>'+
+    '<div class="legend" style="margin-top:0;margin-bottom:8px">Contenuto dell\'<b>XReport</b> (il file <code>&lt;lotto&gt;.xml</code>): un blocco <code>&lt;Document&gt;</code> per documento, con i <b>nomi reali dei campi</b> del tracciato (come li produce <code>StagingAreaToXML</code> via JSON→XML). Le lunghezze/padding esatti e i metadati di stampa non sono inclusi.</div>'+
+    '<pre class="code">'+esc(x)+'</pre>';
+}
+function renderCustData(m){
+  const x = E.buildCustDataXml(m);
+  document.getElementById('pane-custdata').innerHTML =
+    '<div class="legend" style="margin-top:0;margin-bottom:8px">Contenuto di <code>cust_data.xml</code>: <code>&lt;DATASET&gt;</code> con <code>&lt;GLOBAL RECAPITISTA&gt;</code> e una <code>&lt;BUSTA ID&gt;</code> per busta (indirizzo di restituzione <code>ADDCART1..5</code>). RECAPITISTA da <code>TemplateNoplFormat.codrecap</code> (fonte da confermare); ID busta da <code>EnvelopeNop0Format.coduni</code>.</div>'+
     '<pre class="code">'+esc(x)+'</pre>';
 }
 
@@ -258,7 +266,7 @@ function analyze(text, name){
   renderVerdict(checks,m);
   renderStats(m);
   renderChecks(checks);
-  renderStruct(m); renderBol(m); renderXml(m); renderDat(m);
+  renderStruct(m); renderBol(m); renderCustData(m); renderXReport(m); renderDat(m);
   window.scrollTo({top:0,behavior:'smooth'});
 }
 

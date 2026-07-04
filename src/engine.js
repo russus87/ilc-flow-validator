@@ -159,12 +159,37 @@
     }
     return s;
   }
-  function buildCustDataXml(m){
+  // XReport (il file <lotto>.xml): dump <Documents><Document> del contenuto documento.
+  function buildXReportXml(m){
     let x='<?xml version="1.0" encoding="UTF-8"?>\n<Documents>\n';
     m.docs.forEach(d=>{ x+='  <Document>\n'+objToXml(buildDocObject(m,d),2)+'  </Document>\n'; });
     x+='</Documents>';
     return x;
   }
 
-  root.ILC_ENGINE = { M, byDisc, byName, STREAM, trim, esc, field, allFields, parseFlow, validate, resolveSource, cellFor, buildDocObject, buildCustDataXml };
+  // cust_data.xml: stessa logica dell'estensione StagingAreaProcessing.
+  // <DATASET><GLOBAL RECAPITISTA="..."/> + una <BUSTA ID=coduni> per busta con ADDCART1..5.
+  // RECAPITISTA = TemplateNoplFormat.codrecap (DelivererFieldPath); ID busta = EnvelopeNop0Format.coduni;
+  // ADDCART1..5 = EnvelopeNop0Format.addcart1..5; dedup per coduni (una <BUSTA> per busta).
+  function attr(s){ return esc(s).replace(/"/g,'&quot;'); }
+  function buildCustDataXml(m){
+    const recap = m.header.nopl ? trim(m.header.nopl.f.codrecap) : "";
+    let x='<?xml version="1.0" encoding="UTF-8"?>\n<DATASET>\n';
+    x+=`  <GLOBAL RECAPITISTA="${attr(recap)}" />\n`;
+    const seen = new Set();
+    m.envelopes.forEach(e=>{
+      if(!e.nop0) return;
+      const f=e.nop0.f;
+      const id=trim(f.coduni);
+      if(!id || seen.has(id)) return;
+      seen.add(id);
+      x+=`  <BUSTA ID="${attr(id)}">\n`;
+      for(let n=1;n<=5;n++) x+=`    <ADDCART${n}>${esc(trim(f["addcart"+n]))}</ADDCART${n}>\n`;
+      x+='  </BUSTA>\n';
+    });
+    x+='</DATASET>';
+    return x;
+  }
+
+  root.ILC_ENGINE = { M, byDisc, byName, STREAM, trim, esc, field, allFields, parseFlow, validate, resolveSource, cellFor, buildDocObject, buildXReportXml, buildCustDataXml };
 })(typeof window!=='undefined'? window : global);
