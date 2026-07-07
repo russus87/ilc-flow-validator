@@ -105,6 +105,9 @@
   .fq{width:15px;height:21px;border:1px solid #e0908a;margin-left:-1px;display:flex;align-items:center;justify-content:center;font:12px ui-monospace,Menlo,Consolas,monospace;color:#111;background:#fff}
   .fq:first-child{margin-left:0}
   .fq.sp{background:#fbf3f2;border-color:#eeccc9}
+  .fq.hi{background:#fff3b0;border-color:#e6c84d;color:#111}
+  .fq.hi.sp{background:#fff8cf}
+  .fl.hl{background:#fff3b0;border-radius:3px;padding:0 4px}
   .runk{font:12px ui-monospace,Menlo,Consolas,monospace;color:#b3261e;white-space:pre-wrap;word-break:break-all}
   .rulerbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:12px;font-size:13px}
   /* box "come viene creato" (manuale inline) */
@@ -294,8 +297,18 @@ function renderXReport(m){
     '<div class="legend" style="margin-top:0;margin-bottom:8px">Contenuto dell\'<b>XReport</b> (il file <code>&lt;lotto&gt;.xml</code>): un blocco <code>&lt;Document&gt;</code> per documento, con i <b>nomi reali dei campi</b> del tracciato (come li produce <code>StagingAreaToXML</code> via JSON→XML). Le lunghezze/padding esatti e i metadati di stampa non sono inclusi.</div>'+
     '<pre class="code">'+esc(x)+'</pre>';
 }
+// Spaccato del tracciato: NOPL + primo NOP0, con i campi usati dal cust_data evidenziati in giallo.
+function custDataSpaccato(m){
+  const nopl = m.header.nopl;
+  const nop0 = (m.envelopes.find(e=>e.nop0)||{}).nop0;
+  if(!nopl && !nop0) return '';
+  let h='<h4>Spaccato del tracciato <span style="font-weight:400;color:var(--muted)">— i quadretti letti per il <code>cust_data.xml</code> sono evidenziati in <span style="background:#fff3b0;padding:0 5px;border-radius:3px">giallo</span></span></h4>';
+  if(nopl) h+=`<div class="rc"><div class="rh"><span class="rnm">NOPL</span> <span class="muted">${esc(nopl.ent.disc)} → <code>GLOBAL/@RECAPITISTA</code> da <code>codrecap</code></span></div><div class="fbwrap">${fieldBlocks(nopl, new Set(['codrecap']))}</div></div>`;
+  if(nop0) h+=`<div class="rc"><div class="rh"><span class="rnm">NOP0</span> <span class="muted">${esc(nop0.ent.disc)} → <code>BUSTA/@ID</code> da <code>coduni</code>, <code>ADDCART1..5</code> da <code>addcart1..5</code> (prima busta del lotto)</span></div><div class="fbwrap">${fieldBlocks(nop0, new Set(['coduni','addcart1','addcart2','addcart3','addcart4','addcart5']))}</div></div>`;
+  return h;
+}
 // Manuale inline "Come viene creato questo file" (sintesi di docs/cust_data.md).
-function custDataHelp(){
+function custDataHelp(m){
   return '<details class="help"><summary>📖 Come viene creato questo file</summary>'+
     '<p>Il <code>cust_data.xml</code> è un file <b>anagrafico di busta</b>: una <code>&lt;BUSTA&gt;</code> per busta fisica, con il recapitista del lotto e l\'eventuale indirizzo di restituzione. Lo genera l\'estensione <code>StagingAreaProcessing</code> (<code>WriteDataSetXML</code> / <code>BuildBuste</code>).</p>'+
     '<h4>Struttura</h4>'+
@@ -314,6 +327,7 @@ function custDataHelp(){
     '<li><code>RECAPITISTA</code> copiato <b>verbatim</b> (nessuna tabella codice→vettore): se manca e <code>StopOnDelivererNotFound=true</code>, il file non viene generato.</li>'+
     '<li><code>ADDCART</code> valorizzati solo per raccomandate con cartolina di ritorno; l\'indirizzo del destinatario è altrove (<code>destriga*</code>).</li>'+
     '</ul>'+
+    custDataSpaccato(m)+
     '<p class="foot-note">Manuale completo: <code>docs/cust_data.md</code>. Questa è un\'anteprima a scopo di verifica: la logica è identica alla produzione, ma i dati sono letti dal file di input.</p>'+
     '</details>';
 }
@@ -323,7 +337,7 @@ function renderCustData(m){
     fileBar('custdata', 'cust_data.xml', x)+
     '<div class="legend" style="margin-top:0;margin-bottom:8px">Contenuto di <code>cust_data.xml</code>: <code>&lt;DATASET&gt;</code> con <code>&lt;GLOBAL RECAPITISTA&gt;</code> e una <code>&lt;BUSTA ID&gt;</code> per busta (indirizzo di restituzione <code>ADDCART1..5</code>, valorizzato solo per le raccomandate con cartolina di ritorno). RECAPITISTA da <code>TemplateNoplFormat.codrecap</code> (fonte da confermare); ID busta da <code>EnvelopeNop0Format.coduni</code>.</div>'+
     '<pre class="code">'+esc(x)+'</pre>'+
-    custDataHelp();
+    custDataHelp(m);
 }
 
 // ---------- analisi tracciato (griglia a quadretti) ----------
@@ -342,18 +356,19 @@ function allRecords(m){
   return recs;
 }
 // Un blocco per campo: titolo rosso con (caratteri valore / larghezza campo) + una casella per carattere.
-function fieldBlocks(rec){
+function fieldBlocks(rec, highlight){
   const ent=rec.ent, line=rec.line;
   return ent.fields.map(f=>{
     const raw = f.off>=line.length ? '' : line.substr(f.off,f.len);
     const full = raw.padEnd(f.len,' ');
     const valLen = trim(raw).length;
+    const hi = !!(highlight && highlight.has(f.name));
     let cells='';
     for(let i=0;i<f.len;i++){
       const ch=full[i], sp=(ch===' ');
-      cells+=`<span class="fq${sp?' sp':''}">${sp?'':esc(ch)}</span>`;
+      cells+=`<span class="fq${sp?' sp':''}${hi?' hi':''}">${sp?'':esc(ch)}</span>`;
     }
-    return `<div class="fb"><div class="fl">${esc(f.name)}<span class="fn">(${valLen}/${f.len})</span></div><div class="fc">${cells}</div></div>`;
+    return `<div class="fb"><div class="fl${hi?' hl':''}">${esc(f.name)}<span class="fn">(${valLen}/${f.len})</span></div><div class="fc">${cells}</div></div>`;
   }).join('');
 }
 function renderRuler(m){

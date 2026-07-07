@@ -1,6 +1,6 @@
 {
   "name": "ilc-flow-validator",
-  "version": "0.1.5",
+  "version": "0.1.6",
   "description": "Validatore del flusso Unicredit ILC con anteprima BOL / cust_data.xml / DAT",
   "type": "module",
   "scripts": {
