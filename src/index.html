@@ -92,6 +92,21 @@
   .mini{background:#fff;border:1px solid #c3ccd8;border-radius:7px;padding:5px 12px;font-size:12.5px;font-weight:600;color:var(--brand);cursor:pointer}
   .mini:hover{background:#eef5fd}
   .mini.done{background:var(--ok-bg);border-color:#b7e2ca;color:var(--ok)}
+  /* analisi tracciato (griglia a quadretti) */
+  .rc{border:1px solid var(--line);border-radius:8px;padding:11px 13px;margin-bottom:14px}
+  .rh{font-size:13px;margin-bottom:11px;display:flex;gap:9px;align-items:baseline;flex-wrap:wrap}
+  .rh .rno{font-weight:700;color:var(--brand)}
+  .rh .rnm{font-weight:650}
+  .fbwrap{display:flex;flex-wrap:wrap;gap:11px 15px}
+  .fb{display:inline-block}
+  .fl{font:600 11px ui-monospace,Menlo,Consolas,monospace;color:#b3261e;margin-bottom:3px;white-space:nowrap}
+  .fl .fn{color:#cf7b76;font-weight:600;margin-left:1px}
+  .fc{display:flex}
+  .fq{width:15px;height:21px;border:1px solid #e0908a;margin-left:-1px;display:flex;align-items:center;justify-content:center;font:12px ui-monospace,Menlo,Consolas,monospace;color:#111;background:#fff}
+  .fq:first-child{margin-left:0}
+  .fq.sp{background:#fbf3f2;border-color:#eeccc9}
+  .runk{font:12px ui-monospace,Menlo,Consolas,monospace;color:#b3261e;white-space:pre-wrap;word-break:break-all}
+  .rulerbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:12px;font-size:13px}
 </style>
 </head>
 <body>
@@ -140,12 +155,14 @@
         <div class="tab" data-p="custdata">📮 cust_data.xml</div>
         <div class="tab" data-p="xml">🗂️ XReport (.xml)</div>
         <div class="tab" data-p="dat">📊 File .dat</div>
+        <div class="tab" data-p="ruler">🔬 Analisi tracciato</div>
       </div>
       <div class="pane active" id="pane-struct"></div>
       <div class="pane" id="pane-bol"></div>
       <div class="pane" id="pane-custdata"></div>
       <div class="pane" id="pane-xml"></div>
       <div class="pane" id="pane-dat"></div>
+      <div class="pane" id="pane-ruler"></div>
     </div>
 
     <div style="text-align:center;margin-bottom:20px">
@@ -273,7 +290,52 @@ function renderCustData(m){
     '<pre class="code">'+esc(x)+'</pre>';
 }
 
+// ---------- analisi tracciato (griglia a quadretti) ----------
+// Raccoglie tutti i record riconosciuti + sconosciuti, in ordine di riga nel file.
+function allRecords(m){
+  const recs=[]; const push=r=>{ if(r) recs.push(r); };
+  push(m.header.start); push(m.header.nopl); push(m.header.bol);
+  m.envelopes.forEach(e=>{
+    push(e.begin); push(e.nop0);
+    e.docs.forEach(d=>{ push(d.start); Object.values(d.headings).forEach(push); });
+    push(e.end);
+  });
+  push(m.footer);
+  m.unknown.forEach(u=> recs.push({no:u.no, unknown:true, rt:u.rt, line:u.prefix}));
+  recs.sort((a,b)=>a.no-b.no);
+  return recs;
+}
+// Un blocco per campo: titolo rosso con (caratteri valore / larghezza campo) + una casella per carattere.
+function fieldBlocks(rec){
+  const ent=rec.ent, line=rec.line;
+  return ent.fields.map(f=>{
+    const raw = f.off>=line.length ? '' : line.substr(f.off,f.len);
+    const full = raw.padEnd(f.len,' ');
+    const valLen = trim(raw).length;
+    let cells='';
+    for(let i=0;i<f.len;i++){
+      const ch=full[i], sp=(ch===' ');
+      cells+=`<span class="fq${sp?' sp':''}">${sp?'':esc(ch)}</span>`;
+    }
+    return `<div class="fb"><div class="fl">${esc(f.name)}<span class="fn">(${valLen}/${f.len})</span></div><div class="fc">${cells}</div></div>`;
+  }).join('');
+}
+function renderRuler(m){
+  const recs=allRecords(m);
+  let h='<div class="legend" style="margin-top:0;margin-bottom:12px">Ogni quadratino è un carattere del tracciato. In <span style="color:#b3261e;font-weight:700">rosso</span> il riferimento del campo e la griglia, in nero il valore. Accanto al nome: <b>(caratteri del valore / larghezza del campo)</b>. I quadretti chiari sono spazi di riempimento.</div>';
+  h+=`<div class="rulerbar"><b>${recs.length}</b> record nel tracciato</div>`;
+  recs.forEach(r=>{
+    if(r.unknown){
+      h+=`<div class="rc"><div class="rh"><span class="rno">riga ${r.no}</span> <span class="rnm" style="color:#b3261e">record sconosciuto</span> <span class="muted">tag ${esc(r.rt)}</span></div><div class="runk">${esc(r.line)}…</div></div>`;
+      return;
+    }
+    h+=`<div class="rc"><div class="rh"><span class="rno">riga ${r.no}</span> <span class="rnm">${esc(r.ent.name)}</span> <span class="muted">${esc(r.ent.disc)} · ${r.ent.fields.length} campi · len ${r.ent.lineLen}</span></div><div class="fbwrap">${fieldBlocks(r)}</div></div>`;
+  });
+  document.getElementById('pane-ruler').innerHTML=h;
+}
+
 // ---------- main ----------
+let CURRENT_M=null, rulerDone=false;
 function analyze(text, name){
   const m=parseFlow(text);
   currentLotto = trim(m.header.nopl ? field(byName.TemplateNoplFormat, m.header.nopl.line, "nomlot") : "") || "lotto";
@@ -284,6 +346,7 @@ function analyze(text, name){
   renderStats(m);
   renderChecks(checks);
   renderStruct(m); renderBol(m); renderCustData(m); renderXReport(m); renderDat(m);
+  CURRENT_M=m; rulerDone=false; document.getElementById('pane-ruler').innerHTML='';
   window.scrollTo({top:0,behavior:'smooth'});
 }
 
@@ -339,6 +402,7 @@ document.getElementById('tabs').addEventListener('click',e=>{
   document.querySelectorAll('.pane').forEach(x=>x.classList.remove('active'));
   t.classList.add('active');
   document.getElementById('pane-'+t.dataset.p).classList.add('active');
+  if(t.dataset.p==='ruler' && !rulerDone && CURRENT_M){ renderRuler(CURRENT_M); rulerDone=true; }
 });
 document.getElementById('reset').addEventListener('click',()=>{
   document.getElementById('result').classList.add('hidden');
