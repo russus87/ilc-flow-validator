@@ -278,7 +278,7 @@ function renderBol(m){
   h+=outTable(M.outputs.bolHeader,null,[hctx]);
   h+='<h3 style="font-size:14px;margin:18px 0 8px">Dati BOL <span class="muted" style="font-weight:400">(1 riga per documento)</span></h3>';
   h+=outTable(M.outputs.bolData,null,dctxs);
-  h+='<div class="legend">Il file <code>.bol</code> finale contiene l\'intestazione seguita da una riga per ciascun documento. <span class="calc">In corsivo</span> i valori calcolati durante la stampa (vuoti nel file scaricato).</div>';
+  h+='<div class="legend">Il file <code>.bol</code> finale contiene l\'intestazione seguita da una riga per ciascun documento. <span class="calc">In corsivo</span> i valori calcolati durante la stampa (vuoti nel file scaricato). <b>Riga4</b> (<code>Destinatario4</code>, CAP/LOC/PROV): gli spazi interni sono compressi come fa l\'estensione.</div>';
   document.getElementById('pane-bol').innerHTML=fileBar('bol', currentLotto+'.bol', E.buildBolText(m))+h;
 }
 function renderDat(m){

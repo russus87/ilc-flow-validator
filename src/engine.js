@@ -148,6 +148,9 @@
     if(m.header.nopl)  out['TemplateNoplFormat']=fieldsObj(m.header.nopl,['streamType','recordType']);
     if(doc.env.begin)  out['EnvelopeBegin']=fieldsObj(doc.env.begin,['streamType','recordType']);
     if(doc.env.nop0)   out['EnvelopeNop0Format']=fieldsObj(doc.env.nop0,['streamType','recordType']);
+    // [D] allinea la riga CAP/LOC/PROV (destriga4) al comportamento dell'estensione: spazi interni compressi.
+    if(out['EnvelopeNop0Format'] && typeof out['EnvelopeNop0Format'].destriga4 === 'string')
+      out['EnvelopeNop0Format'].destriga4 = collapseInner(out['EnvelopeNop0Format'].destriga4);
     return out;
   }
   function objToXml(obj, indent){
@@ -199,10 +202,15 @@
     if(v.length > len) v = v.substr(0, len);
     return type === 'num' ? v.padStart(len, '0') : v.padEnd(len, ' ');
   }
+  // [D] destriga4 = Destinatario4 (riga CAP/LOC/PROV): l'estensione StagingAreaProcessing comprime
+  // gli spazi interni ("00192 BRINDISI      BR" -> "00192 BRINDISI BR"). Allineo qui gli output flat.
+  function collapseInner(s){ return (s == null ? '' : String(s)).replace(/ {2,}/g, ' '); }
   function buildFlatText(m, fields, ctxs){
     return ctxs.map(ctx => fields.map(f => {
       const c = cellFor(f, ctx);
-      return pad(c.calc ? '' : c.text, f.len, f.type);
+      let text = c.calc ? '' : c.text;
+      if(f.src === 'EnvelopeNop0Format.destriga4') text = collapseInner(text);
+      return pad(text, f.len, f.type);
     }).join('')).join('\n');
   }
   function buildBolText(m){

@@ -1,6 +1,6 @@
 [package]
 name = "ilc-flow-validator"
-version = "0.1.6"
+version = "0.1.7"
 description = "Validatore del flusso Unicredit ILC con anteprima BOL / cust_data.xml / DAT"
 authors = ["russus"]
 edition = "2021"
