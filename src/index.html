@@ -107,6 +107,18 @@
   .fq.sp{background:#fbf3f2;border-color:#eeccc9}
   .runk{font:12px ui-monospace,Menlo,Consolas,monospace;color:#b3261e;white-space:pre-wrap;word-break:break-all}
   .rulerbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:12px;font-size:13px}
+  /* box "come viene creato" (manuale inline) */
+  details.help{margin-top:16px;border:1px solid var(--line);border-radius:8px;padding:0 14px;background:#fbfcfe}
+  details.help>summary{cursor:pointer;font-weight:650;padding:11px 0;color:var(--brand);font-size:14px;list-style:none}
+  details.help>summary::-webkit-details-marker{display:none}
+  details.help>summary::before{content:"▸ ";color:var(--brand)}
+  details.help[open]>summary::before{content:"▾ "}
+  details.help[open]>summary{border-bottom:1px solid var(--line);margin-bottom:10px}
+  details.help h4{margin:14px 0 6px;font-size:13.5px}
+  details.help p,details.help li{font-size:13px;color:var(--ink)}
+  details.help code{background:var(--chip);padding:1px 5px;border-radius:4px;font-size:12px}
+  details.help table{margin:6px 0}
+  details.help .foot-note{font-size:12.5px;color:var(--muted);margin-top:10px}
 </style>
 </head>
 <body>
@@ -282,12 +294,36 @@ function renderXReport(m){
     '<div class="legend" style="margin-top:0;margin-bottom:8px">Contenuto dell\'<b>XReport</b> (il file <code>&lt;lotto&gt;.xml</code>): un blocco <code>&lt;Document&gt;</code> per documento, con i <b>nomi reali dei campi</b> del tracciato (come li produce <code>StagingAreaToXML</code> via JSON→XML). Le lunghezze/padding esatti e i metadati di stampa non sono inclusi.</div>'+
     '<pre class="code">'+esc(x)+'</pre>';
 }
+// Manuale inline "Come viene creato questo file" (sintesi di docs/cust_data.md).
+function custDataHelp(){
+  return '<details class="help"><summary>📖 Come viene creato questo file</summary>'+
+    '<p>Il <code>cust_data.xml</code> è un file <b>anagrafico di busta</b>: una <code>&lt;BUSTA&gt;</code> per busta fisica, con il recapitista del lotto e l\'eventuale indirizzo di restituzione. Lo genera l\'estensione <code>StagingAreaProcessing</code> (<code>WriteDataSetXML</code> / <code>BuildBuste</code>).</p>'+
+    '<h4>Struttura</h4>'+
+    '<p><code>&lt;DATASET&gt;</code> → <code>&lt;GLOBAL RECAPITISTA&gt;</code> (uno, per tutto il lotto) → una <code>&lt;BUSTA ID&gt;</code> per busta, con <code>&lt;ADDCART1..5&gt;</code>.</p>'+
+    '<h4>Da dove arriva ogni valore</h4>'+
+    '<div class="scroll"><table><thead><tr><th>Elemento</th><th>Record</th><th>Campo</th><th>Opzione</th></tr></thead><tbody>'+
+    '<tr><td>GLOBAL/@RECAPITISTA</td><td>NOPL <code>000000011000</code></td><td><code>codrecap</code></td><td><code>DelivererFieldPath</code></td></tr>'+
+    '<tr><td>BUSTA/@ID</td><td>NOP0 <code>000000021000</code></td><td><code>coduni</code></td><td><code>BustaIdFieldPath</code></td></tr>'+
+    '<tr><td>ADDCART1..5</td><td>NOP0 <code>000000021000</code></td><td><code>addcart1..5</code></td><td><code>AddcartFieldPathPrefix</code></td></tr>'+
+    '</tbody></table></div>'+
+    '<h4>Regole</h4>'+
+    '<ul>'+
+    '<li><b>Una busta per <code>coduni</code></b>: buste deduplicate; prevale il primo documento con quel codice.</li>'+
+    '<li><b>Trim</b> di <code>coduni</code>/<code>addcart*</code> (solo agli estremi: lo spazio interno resta, es. <code>ID="C0 T3Q6…"</code>).</li>'+
+    '<li>Documento con <code>coduni</code> vuoto → nessuna busta.</li>'+
+    '<li><code>RECAPITISTA</code> copiato <b>verbatim</b> (nessuna tabella codice→vettore): se manca e <code>StopOnDelivererNotFound=true</code>, il file non viene generato.</li>'+
+    '<li><code>ADDCART</code> valorizzati solo per raccomandate con cartolina di ritorno; l\'indirizzo del destinatario è altrove (<code>destriga*</code>).</li>'+
+    '</ul>'+
+    '<p class="foot-note">Manuale completo: <code>docs/cust_data.md</code>. Questa è un\'anteprima a scopo di verifica: la logica è identica alla produzione, ma i dati sono letti dal file di input.</p>'+
+    '</details>';
+}
 function renderCustData(m){
   const x = E.buildCustDataXml(m);
   document.getElementById('pane-custdata').innerHTML =
     fileBar('custdata', 'cust_data.xml', x)+
     '<div class="legend" style="margin-top:0;margin-bottom:8px">Contenuto di <code>cust_data.xml</code>: <code>&lt;DATASET&gt;</code> con <code>&lt;GLOBAL RECAPITISTA&gt;</code> e una <code>&lt;BUSTA ID&gt;</code> per busta (indirizzo di restituzione <code>ADDCART1..5</code>, valorizzato solo per le raccomandate con cartolina di ritorno). RECAPITISTA da <code>TemplateNoplFormat.codrecap</code> (fonte da confermare); ID busta da <code>EnvelopeNop0Format.coduni</code>.</div>'+
-    '<pre class="code">'+esc(x)+'</pre>';
+    '<pre class="code">'+esc(x)+'</pre>'+
+    custDataHelp();
 }
 
 // ---------- analisi tracciato (griglia a quadretti) ----------
